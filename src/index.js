@@ -7,6 +7,9 @@ import TabBar from "./TabBar";
 import Sidebar from "./Sidebar";
 import { injectCSSVariables } from "./Theme.js";
 
+
+injectCSSVariables(); // injects CSS variables based on Theme.js colors, fonts, etc.
+
 // ── Placeholder page content — replace with your real views ──
 function PageContent() {
   const { activeTabId } = useTabs();
@@ -27,8 +30,8 @@ function PageContent() {
         : activeTabId.replace("client-", "").replace(/-/g, " "));
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
-      <p className="text-2xl font-medium text-gray-700">{label}</p>
+    <div className="flex-1 flex flex-col items-center justify-center text-text-muted">
+      <p className="text-2xl font-medium text-text-primary">{label}</p>
       <p className="text-sm mt-1">Tab ID: {activeTabId}</p>
     </div>
   );
@@ -37,7 +40,7 @@ function PageContent() {
 export default function App() {
   return (
     <TabProvider>
-          <div className="flex h-screen overflow-hidden bg-white">
+          <div className="flex h-screen overflow-hidden bg-bg-page">
     
             {/* Sidebar */}
             <Sidebar />
@@ -58,8 +61,6 @@ export default function App() {
     </TabProvider>
   );
 }
-
-injectCSSVariables(); // injects CSS variables based on Theme.js colors, fonts, etc.
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
