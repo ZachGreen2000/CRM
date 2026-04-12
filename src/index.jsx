@@ -1,11 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import './index.css';
+import './Frontend/index.css';
 import { useState } from "react";
-import { TabProvider, useTabs } from "./TabContext";
-import TabBar from "./TabBar";
-import Sidebar from "./Sidebar";
-import { injectCSSVariables } from "./Theme.js";
+import { TabProvider, useTabs } from "./Frontend/TabContext.jsx";
+import TabBar from "./Frontend/TabBar.jsx";
+import Sidebar from "./Frontend/Sidebar.jsx";
+import { injectCSSVariables } from "./Frontend/Theme.js";
+import Floatingchat from "./Frontend/Floatingchat.jsx";
+import { useChat } from "./hooks/useChat";
 
 
 injectCSSVariables(); // injects CSS variables based on Theme.js colors, fonts, etc.
@@ -38,8 +40,14 @@ function PageContent() {
 }
 
 export default function App() {
+  const { sendMessage } = useChat();
   return (
     <TabProvider>
+          <Floatingchat onSend={async (message) => {
+            // call your AI API here, return the reply string
+            const reply = await sendMessage(message);
+            return reply;
+          }} />
           <div className="flex h-screen overflow-hidden bg-bg-page">
     
             {/* Sidebar */}
@@ -58,7 +66,7 @@ export default function App() {
     
             </div>
           </div>
-    </TabProvider>
+    </TabProvider> 
   );
 }
 
