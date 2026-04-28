@@ -9,7 +9,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:5173"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -21,6 +21,13 @@ class ChatRequest(BaseModel):
 
 OLLAMA_URL = "http://localhost:11434/api/chat"
 MODEL      = "qwen3:8b"
+
+OLLAMA_TIMEOUT = httpx.Timeout(
+    connect=10.0,   # time to establish connection
+    read=120.0,     # time to wait for response — models can be slow
+    write=10.0,
+    pool=10.0
+)
 
 
 async def classify_intent(message: str, history: list) -> tuple[str, dict]:
@@ -42,7 +49,7 @@ Respond in this exact JSON format only, no other text:
 
 If no tool fits, use "general_query"."""
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=OLLAMA_TIMEOUT) as client:
         res = await client.post(OLLAMA_URL, json={
             "model": MODEL,
             "stream": False,
@@ -82,7 +89,7 @@ Do not mention tools or technical details."""
 
     content = f"Tool result: {tool_result}\nUser asked: {message}"
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
+    async with httpx.AsyncClient(timeout=OLLAMA_TIMEOUT) as client:
         res = await client.post(OLLAMA_URL, json={
             "model": MODEL,
             "stream": False,

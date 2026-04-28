@@ -152,7 +152,7 @@ export default function FloatingChat({
       }
       setMessages((prev) => [...prev, { role: "ai", content: reply }]);
     } catch (err) {
-      setMessages((prev) => [...prev, { role: "ai", content: "Something went wrong. Please try again." }]);
+      setMessages((prev) => [...prev, { role: "ai", content: "Something went wrong. Please try again." + err.message }]);
     } finally {
       setLoading(false);
       textareaRef.current?.focus();

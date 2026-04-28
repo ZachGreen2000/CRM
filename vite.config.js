@@ -9,7 +9,7 @@ export default defineConfig({
   server: {
     port: 5173, // Vite's default port
     proxy: {
-      "/api": "http://localhost:8000", // forwards to your Express brain
+      "/api": "http://localhost:5000", // forwards to your Express brain
     },
   },
 });

@@ -128,6 +128,43 @@ TOOLS: dict[str, Tool] = {
         ],
     ),
 
+    "add_client": Tool(
+        name="add_client",
+        description=(
+            "Adds a new client (business) to the CRM database. "
+            "Use when the user wants to create or register a new company or organisation."
+        ),
+        agent_module="src.Orchestrator.Agents.email_agent",
+        parameters=["name"],
+        optional_params=["domain"],
+        examples=[
+            "add a new client",
+            "create a client called Acme Ltd",
+            "register a new company",
+            "add Acme Ltd to the CRM",
+            "new client: Acme Ltd, acme.com",
+        ],
+    ),
+
+    "add_contact": Tool(
+        name="add_contact",
+        description=(
+            "Adds a new contact (person) to the CRM database and links them to an existing client. "
+            "Use when the user wants to add a person to a company already in the CRM. "
+            "Requires a name and email. Client can be identified by name or ID."
+        ),
+        agent_module="src.Orchestrator.Agents.email_agent",
+        parameters=["name", "email"],
+        optional_params=["client_name", "client_id", "role"],
+        examples=[
+            "add a new contact",
+            "add John Smith from Acme Ltd",
+            "create a contact for jane@acme.com",
+            "new contact: John Smith, CEO at Acme Ltd",
+            "register a contact under Acme Ltd",
+        ],
+    ),
+
     # ── General ────────────────────────────────────────────────────────────────
     "general_query": Tool(
         name="general_query",

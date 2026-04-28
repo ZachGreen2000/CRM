@@ -12,7 +12,10 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "vite",
+    "start": "concurrently \"npm run frontend\" \"npm run backend\" \"npm run ollama\"",
+    "frontend": "vite",
+    "backend": "python -m uvicorn src.Orchestrator.brain:app --reload --port 5000",
+    "ollama": "ollama serve",
     "build": "vite build",
     "preview": "vite preview",
     "test": "react-scripts test"

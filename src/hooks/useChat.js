@@ -12,6 +12,9 @@ export function useChat() {
       body: JSON.stringify({ message: text, history }),
     });
 
+    const rawText = await res.text();
+    console.log("Raw response:", rawText, "Status:", res.status);
+
     const data = await res.json();
     const reply = data.reply;
 
