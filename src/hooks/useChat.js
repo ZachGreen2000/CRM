@@ -15,7 +15,7 @@ export function useChat() {
     const rawText = await res.text();
     console.log("Raw response:", rawText, "Status:", res.status);
 
-    const data = await res.json();
+    const data = rawText ? JSON.parse(rawText) : {};
     const reply = data.reply;
 
     setHistory([...updatedHistory, { role: "assistant", content: reply }]);

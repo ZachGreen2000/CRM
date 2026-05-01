@@ -12,9 +12,9 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "concurrently \"npm run frontend\" \"npm run backend\" \"npm run ollama\"",
+    "start": "concurrently \"npm run frontend\" \"npm run backend\"",
     "frontend": "vite",
-    "backend": "python -m uvicorn src.Orchestrator.brain:app --reload --port 5000",
+    "backend": ".venv\\Scripts\\python -m uvicorn src.Orchestrator.brain:app --reload --port 5000",
     "ollama": "ollama serve",
     "build": "vite build",
     "preview": "vite preview",

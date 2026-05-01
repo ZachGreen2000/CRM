@@ -10,7 +10,11 @@ import httpx
 
 async def get_db():
     # Connect to local SQLite database
-    db_path = os.path.join(os.path.dirname(__file__), "..", "Database", "crm.db")
+    # Use absolute path from project root to avoid working directory issues
+    # __file__ is at: src/Orchestrator/Agents/email_agent.py
+    # Go up 3 levels to project root, then back down to src/Database
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    db_path = os.path.join(project_root, "src", "Database", "crm.db")
     return await aiosqlite.connect(db_path)
 
 # ── Embedding via Ollama (or swap for OpenAI) ────────────────────────────────
@@ -289,11 +293,15 @@ async def add_contact(
             )
             row = await cursor.fetchone()
             if not row:
-                return {
-                    "success": False,
-                    "error":   f"Client '{client_name}' not found — add the client first"
-                }
-            client_id = row[0]
+                # Client doesn't exist, create it automatically
+                client_id = str(uuid.uuid4())
+                await db.execute(
+                    "INSERT INTO clients (id, name, domain, created_at) VALUES (?, ?, ?, datetime('now'))",
+                    (client_id, client_name, None)
+                )
+                await db.commit()
+            else:
+                client_id = row[0]
 
         if not client_id:
             return {"success": False, "error": "A client name or client_id is required"}
