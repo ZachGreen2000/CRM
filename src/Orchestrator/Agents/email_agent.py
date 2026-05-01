@@ -107,8 +107,8 @@ async def fetch_emails(limit: int, folder: str) -> dict:
         # Run blocking MailBox operations in a thread executor to avoid blocking the event loop
         def _fetch_from_imap():
             with MailBox("imap.gmail.com").login(
-                os.environ["EMAIL_USER"],
-                os.environ["EMAIL_PASS"]
+                os.getenv("EMAIL_USER"),
+                os.getenv("EMAIL_PASS")
             ) as mailbox:
                 mailbox.folder.set(folder)
                 return list(mailbox.fetch(AND(seen=False), limit=limit))

@@ -4,7 +4,7 @@ from pydantic import BaseModel
 import httpx
 import importlib
 from src.Orchestrator.Tools.registry import get_tool, get_tool_descriptions_for_prompt
-
+from dotenv import load_dotenv  # add this
 app = FastAPI()
 
 app.add_middleware(
