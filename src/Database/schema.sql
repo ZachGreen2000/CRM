@@ -19,7 +19,7 @@ CREATE TABLE contacts (
   created_at  TEXT DEFAULT (datetime('now'))
 );
 
--- Individual emails
+-- Individual emails (embeddings now stored in ChromaDB vector store)
 CREATE TABLE emails (
   id            TEXT PRIMARY KEY,
   contact_id    TEXT REFERENCES contacts(id) ON DELETE CASCADE,
@@ -32,21 +32,26 @@ CREATE TABLE emails (
   created_at    TEXT DEFAULT (datetime('now'))
 );
 
--- One embedding per email (for retrieval)
--- Note: SQLite doesn't have vector extension, storing as TEXT for now
-CREATE TABLE email_embeddings (
-  id          TEXT PRIMARY KEY,
-  email_id    TEXT REFERENCES emails(id) ON DELETE CASCADE,
-  embedding   TEXT  -- JSON string representation of embedding vector
-);
-
--- Rolling AI summary per contact (regenerated periodically)
+-- Rolling AI summary per contact (embeddings now stored in ChromaDB)
+-- Summary text cached here, vector embeddings in ChromaDB
 CREATE TABLE contact_summaries (
   id            TEXT PRIMARY KEY,
   contact_id    TEXT REFERENCES contacts(id) ON DELETE CASCADE UNIQUE,
   summary_text  TEXT,
-  embedding     TEXT,  -- JSON string representation of embedding vector
-  updated_at    TEXT DEFAULT (datetime('now'))
+  updated_at    TEXT DEFAULT (datetime('now')),
+  email_count   INTEGER DEFAULT 0,  -- track number of emails summarized
+  last_email_id TEXT  -- track the last email processed for this summary
+);
+
+-- Thread summaries (incremental summaries for email threads)
+-- Summary text cached here, vector embeddings in ChromaDB
+CREATE TABLE thread_summaries (
+  id            TEXT PRIMARY KEY,
+  thread_id     TEXT UNIQUE,  -- matches emails.thread_id
+  contact_id    TEXT REFERENCES contacts(id) ON DELETE CASCADE,
+  summary_text  TEXT,
+  updated_at    TEXT DEFAULT (datetime('now')),
+  email_count   INTEGER DEFAULT 0
 );
 
 -- Rolling AI summary per client

@@ -4,7 +4,12 @@ from pydantic import BaseModel
 import httpx
 import importlib
 from src.Orchestrator.Tools.registry import get_tool, get_tool_descriptions_for_prompt
-from dotenv import load_dotenv  # add this
+from src.Orchestrator.Agents.email_agent import get_db
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 app = FastAPI()
 
 app.add_middleware(
@@ -18,6 +23,8 @@ class ChatRequest(BaseModel):
     message: str
     history: list = []
     context: dict = {}  # current tab, open contact, etc.
+    model: str | None = None
+    intent_model: str | None = None
 
 OLLAMA_URL = "http://localhost:11434/api/chat"
 MODEL      = "qwen3:8b"
@@ -31,7 +38,25 @@ OLLAMA_TIMEOUT = httpx.Timeout(
 )
 
 
-async def classify_intent(message: str, history: list) -> dict:
+def parse_ollama_content(data: dict, default: str = "") -> str:
+    message = data.get("message")
+    if not message:
+        print(f"[WARN] Ollama response missing 'message' field: {data}")
+        return default
+
+    content = message.get("content")
+    if content is None:
+        print(f"[WARN] Ollama response missing 'content': {data}")
+        return default
+
+    if not isinstance(content, str):
+        print(f"[WARN] Ollama response content is not a string: {type(content).__name__} - {content}")
+        return str(content)
+
+    return content
+
+
+async def classify_intent(message: str, history: list, intent_model: str = INTENT_MODEL) -> dict:
     """
     Use a small model to classify if the user query is general small talk OR needs tool-based action.
     Does NOT have access to tool registry - just summarizes intent.
@@ -64,7 +89,7 @@ Examples:
     try:
         async with httpx.AsyncClient(timeout=OLLAMA_TIMEOUT) as client:
             res = await client.post(OLLAMA_URL, json={
-                "model": INTENT_MODEL,
+                "model": intent_model,
                 "stream": False,
                 "messages": [
                     {"role": "system", "content": system_prompt},
@@ -73,12 +98,13 @@ Examples:
                 ],
             })
             data = res.json()
+            content = parse_ollama_content(data)
             # Debug logging
             print(f"[DEBUG] Model used: {data.get('model', 'unknown')}")
-            print(f"[DEBUG] Raw response: {data['message']['content'][:200]}")  # first 200 chars
+            print(f"[DEBUG] Raw response: {content[:200]}")  # first 200 chars
 
         import json
-        text = data["message"]["content"].strip()
+        text = content.strip()
         try:
             print(f"[DEBUG] Raw intent response: {text}")
             parsed = json.loads(text)
@@ -103,7 +129,10 @@ Respond naturally and concisely to the user's message."""
                 
                 return {
                     "is_general_query": True,
-                    "direct_response": answer_data["message"]["content"],
+                    "direct_response": parse_ollama_content(
+                        answer_data,
+                        default="I'm sorry, I could not generate a reply."
+                    ),
                 }
             
             # If it needs action, return the intent summary for the large model
@@ -128,7 +157,7 @@ Respond naturally and concisely to the user's message."""
         }
 
 
-async def resolve_tool(intent_summary: str, details: str, history: list) -> tuple[str, dict]:
+async def resolve_tool(intent_summary: str, details: str, history: list, model: str = MODEL) -> tuple[str, dict]:
     """
     Use the large model with access to tool registry to determine which tool to call.
     The intent has already been summarized by the small model.
@@ -152,7 +181,7 @@ Respond in this exact JSON format only, no other text:
     try:
         async with httpx.AsyncClient(timeout=OLLAMA_TIMEOUT) as client:
             res = await client.post(OLLAMA_URL, json={
-                "model": MODEL,
+                "model": model,
                 "stream": False,
                 "messages": [
                     {"role": "system", "content": system_prompt},
@@ -161,11 +190,12 @@ Respond in this exact JSON format only, no other text:
                 ],
             })
             data = res.json()
+            content = parse_ollama_content(data)
             print(f"[DEBUG] Model used: {data.get('model', 'unknown')}")
-            print(f"[DEBUG] Raw response: {data['message']['content'][:200]}")  # first 200 chars
+            print(f"[DEBUG] Raw response: {content[:200]}")  # first 200 chars
 
         import json
-        text = data["message"]["content"].strip()
+        text = content.strip()
         try:
             parsed = json.loads(text)
             return parsed.get("tool", "general_query"), parsed.get("params", {})
@@ -176,7 +206,7 @@ Respond in this exact JSON format only, no other text:
         return "general_query", {}
 
 
-async def call_agent(tool_name: str, params: dict) -> dict:
+async def call_agent(tool_name: str, params: dict, model: str | None = None) -> dict:
     """Dynamically import and run the right agent."""
     tool = get_tool(tool_name)
     if not tool:
@@ -184,10 +214,12 @@ async def call_agent(tool_name: str, params: dict) -> dict:
 
     module = importlib.import_module(tool.agent_module)
     params["action"] = tool_name
+    if model:
+        params["model"] = model
     return await module.run(params)
 
 
-async def generate_reply(message: str, tool_result: dict, history: list) -> str:
+async def generate_reply(message: str, tool_result: dict, history: list, model: str = MODEL) -> str:
     """Turn a tool result into a natural language reply."""
     system = """You are a helpful CRM assistant. 
 Given a tool result, respond naturally and concisely to the user.
@@ -198,7 +230,7 @@ Do not mention tools or technical details."""
     try:
         async with httpx.AsyncClient(timeout=OLLAMA_TIMEOUT) as client:
             res = await client.post(OLLAMA_URL, json={
-                "model": MODEL,
+                "model": model,
                 "stream": False,
                 "messages": [
                     {"role": "system", "content": system},
@@ -208,10 +240,48 @@ Do not mention tools or technical details."""
             })
             data = res.json()
 
-        return data["message"]["content"]
+        content = parse_ollama_content(data, default="")
+        if not content.strip():
+            print(f"[WARN] Ollama generate_reply returned empty content: {data}")
+            raise ValueError("Empty Ollama response content")
+        return content
     except Exception as e:
         print(f"[WARN] Ollama generate_reply failed: {e}. Returning fallback response.")
         return f"Tool executed successfully: {tool_result}"
+
+
+@app.get("/api/clients")
+async def get_clients():
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT id, name, domain FROM clients ORDER BY name"
+        )
+        rows = await cursor.fetchall()
+        clients = []
+        for client_id, name, domain in rows:
+            contact_cursor = await db.execute(
+                "SELECT id, name, email, role FROM contacts WHERE client_id = ? ORDER BY name",
+                (client_id,)
+            )
+            contacts = [
+                {
+                    "id": contact_id,
+                    "name": contact_name,
+                    "email": email,
+                    "role": role,
+                }
+                for contact_id, contact_name, email, role in await contact_cursor.fetchall()
+            ]
+            clients.append({
+                "id": client_id,
+                "name": name,
+                "domain": domain,
+                "contacts": contacts,
+            })
+        return {"clients": clients}
+    finally:
+        await db.close()
 
 
 @app.post("/api/chat")
@@ -221,7 +291,11 @@ async def chat(req: ChatRequest):
         # Wrap entire operation with timeout (6 minutes for model processing)
         async def _chat():
             # 1. Classify intent using SMALL model (no tool registry - just summarizes)
-            intent_result = await classify_intent(req.message, req.history)
+            intent_result = await classify_intent(
+                req.message,
+                req.history,
+                intent_model=req.intent_model or INTENT_MODEL,
+            )
             
             # If it's a general query, return the small model's direct response
             if intent_result["is_general_query"]:
@@ -231,18 +305,22 @@ async def chat(req: ChatRequest):
                     "tool_result": {"type": "general_response", "message": req.message},
                 }
             
+            llm_model = req.model or MODEL
+            intent_model = req.intent_model or INTENT_MODEL
+
             # 2. Use LARGE model to resolve which tool to call based on the intent summary
             tool_name, params = await resolve_tool(
                 intent_result["intent_summary"], 
                 intent_result["details"], 
-                req.history
+                req.history,
+                model=llm_model,
             )
             
             # 3. Call the right agent
-            tool_result = await call_agent(tool_name, {**params, **req.context})
+            tool_result = await call_agent(tool_name, {**params, **req.context}, model=llm_model)
 
             # 4. Generate natural language reply using the larger model
-            reply = await generate_reply(req.message, tool_result, req.history)
+            reply = await generate_reply(req.message, tool_result, req.history, model=llm_model)
 
             return {
                 "reply": reply,

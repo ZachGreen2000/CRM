@@ -27,9 +27,11 @@ function PageContent() {
   };
 
   const label = titles[activeTabId]
-    ?? (activeTabId.startsWith("contact-")
-        ? activeTabId.replace("contact-", "").replace(/-/g, " ")
-        : activeTabId.replace("client-", "").replace(/-/g, " "));
+    ?? (activeTabId && typeof activeTabId === 'string'
+        ? (activeTabId.startsWith("contact-")
+            ? activeTabId.replace("contact-", "").replace(/-/g, " ")
+            : activeTabId.replace("client-", "").replace(/-/g, " "))
+        : "Unknown");
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center text-text-muted">

@@ -36,19 +36,21 @@ TOOLS: dict[str, Tool] = {
         ],
     ),
 
-    "update_contact_from_email": Tool(
-        name="update_contact_from_email",
+    "search_emails": Tool(
+        name="search_emails",
         description=(
-            "Reads an email and uses an AI agent to summarise it, then updates "
-            "the matching contact record with the summary and interaction log."
+            "Search through email content using semantic similarity. "
+            "Find relevant emails based on meaning rather than exact keywords. "
+            "Can filter by specific contact if contact_id is provided."
         ),
         agent_module="src.Orchestrator.Agents.email_agent",
-        parameters=["email_data"],
-        optional_params=["contact_id"],
+        parameters=["query"],
+        optional_params=["contact_id", "limit"],
         examples=[
-            "update contact from this email",
-            "log this email against the contact",
-            "summarise and save this email",
+            "find emails about project deadlines",
+            "search for complaints from this contact",
+            "look for emails mentioning budget",
+            "find recent communications about pricing",
         ],
     ),
 
@@ -111,13 +113,13 @@ TOOLS: dict[str, Tool] = {
     ),
 
     # ── Contacts ───────────────────────────────────────────────────────────────
-    "summarise_contact": Tool(
-        name="summarise_contact",
+    "_generate_contact_summary": Tool(
+        name="_generate_contact_summary",
         description=(
             "Generates an AI summary of a contact including recent interactions, "
             "open tasks, and relationship notes."
         ),
-        agent_module="src.Orchestrator.Agents.contact_agent",
+        agent_module="src.Orchestrator.Agents.email_agent",
         parameters=["contact_id"],
         optional_params=[],
         examples=[

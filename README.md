@@ -1,6 +1,179 @@
-# Getting Started with Create React App
+# CRM Email Assistant
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A sophisticated CRM system with AI-powered email processing, vector embeddings, and incremental summarization.
+
+## Architecture Overview
+
+### Core Components
+
+- **Frontend**: React-based UI for managing contacts, clients, and email interactions
+- **Backend**: FastAPI server with AI orchestration
+- **Database**: SQLite for relational data (emails, contacts, clients)
+- **Vector Store**: ChromaDB for semantic search and embeddings
+- **AI Models**: Ollama for embeddings and text generation
+
+### Email Processing Pipeline
+
+1. **Ingestion**: IMAP connection fetches unread emails
+2. **Contact Resolution**: Matches emails to existing CRM contacts
+3. **Vector Storage**: Email content embedded and stored in ChromaDB
+4. **Thread Summarization**: Incremental AI summaries for email threads
+5. **Retrieval**: Semantic search across email history
+
+## Key Features
+
+### Vector Embeddings & Retrieval
+- Emails stored in SQLite with metadata
+- Content embeddings stored in ChromaDB for efficient similarity search
+- Semantic search capabilities for finding relevant emails
+
+### Incremental Thread Summarization
+- Thread summaries updated incrementally as new emails arrive
+- Cached summaries reduce AI processing overhead
+- Context-aware summarization using conversation history
+
+### AI-Powered Contact Management
+- Automatic contact summary generation
+- Relationship insights from email patterns
+- Smart contact matching and resolution
+
+## Setup Instructions
+
+### Prerequisites
+- Python 3.8+
+- Node.js 16+
+- Ollama (for AI models)
+- Gmail account with app password
+
+### Installation
+
+1. **Clone and setup Python environment:**
+```bash
+cd crm
+python -m venv .venv
+source .venv/Scripts/activate  # Windows
+pip install -r requirements.txt
+```
+
+2. **Install ChromaDB:**
+```bash
+pip install chromadb
+```
+
+3. **Setup Ollama models:**
+```bash
+ollama pull nomic-embed-text  # For embeddings
+ollama pull llama3            # For text generation
+ollama pull qwen3:8b          # For intent classification
+ollama pull gemma4:e4b        # For small tasks
+```
+
+4. **Configure environment:**
+```bash
+cp .env.example .env
+# Edit .env with your Gmail credentials
+```
+
+5. **Initialize database:**
+```bash
+python migrate_db.py
+```
+
+6. **Setup frontend:**
+```bash
+npm install
+npm start
+```
+
+7. **Start backend:**
+```bash
+npm run backend  # or: uvicorn src.Orchestrator.brain:app --reload --port 5000
+```
+
+## Database Schema
+
+### Core Tables
+- `clients`: Business organizations
+- `contacts`: People within businesses
+- `emails`: Individual email messages
+- `contact_summaries`: AI-generated contact relationship summaries
+- `thread_summaries`: Incremental email thread summaries
+
+### Vector Collections (ChromaDB)
+- `emails`: Email content embeddings with metadata
+- `contact_summaries`: Contact summary embeddings
+- `thread_summaries`: Thread summary embeddings
+
+## API Endpoints
+
+- `POST /api/chat`: Main AI chat interface
+- Email processing handled through tool system
+
+## Available Tools
+
+- `fetch_emails`: Import emails from IMAP
+- `search_emails`: Semantic search through email history
+- `update_contact_from_email`: Update contact summaries
+- `add_client`: Create new client records
+- `add_contact`: Create new contact records
+
+## Architecture Benefits
+
+### Performance
+- Vector similarity search for fast email retrieval
+- Incremental summarization reduces AI API calls
+- ChromaDB optimized for embedding operations
+
+### Scalability
+- Separate storage for relational vs vector data
+- Efficient metadata filtering in vector searches
+- Cached summaries for quick access
+
+### Intelligence
+- Semantic understanding of email content
+- Context-aware conversation summarization
+- Relationship insights from communication patterns
+
+## Development
+
+### Adding New Tools
+1. Create agent function in `src/Orchestrator/Agents/`
+2. Register tool in `src/Orchestrator/Tools/registry.py`
+3. Add to agent's `run()` method
+
+### Vector Store Operations
+```python
+from src.Memory.vector_store import get_vector_store
+
+vector_store = get_vector_store()
+# Store embeddings
+await vector_store.store_email_embedding(email_id, content, embedding, metadata)
+# Search similar content
+results = await vector_store.search_similar_emails(query_embedding, contact_id=contact_id)
+```
+
+### Thread Summarization
+```python
+from src.Memory.thread_summarizer import get_thread_summarizer
+
+summarizer = get_thread_summarizer()
+# Update thread summary with new email
+await summarizer.generate_incremental_summary(thread_id, contact_id, email_content, metadata)
+```
+
+## Troubleshooting
+
+### Common Issues
+- **Environment variables not loading**: Ensure `.env` file exists and `load_dotenv()` is called
+- **ChromaDB connection issues**: Check if `./chroma_db` directory is writable
+- **Ollama model not found**: Run `ollama pull <model_name>`
+- **IMAP authentication failed**: Verify Gmail app password and 2FA settings
+
+### Logs
+Check console output for detailed logging:
+- `[EMAIL_AGENT]`: Email processing steps
+- `[VECTOR_STORE]`: Vector database operations
+- `[THREAD_SUMMARIZER]`: Summary generation process
 
 ## Available Scripts
 

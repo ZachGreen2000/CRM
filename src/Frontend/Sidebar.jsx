@@ -1,27 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTabs } from "./TabContext";
 import { clientPalette } from "./Theme.js";
- 
-const clients = [
-  { id: "acme", name: "Acme Corp", initials: "AC", contacts: [
-    { id: "alice", name: "Alice Martin" },
-    { id: "bob", name: "Bob Lee" },
-    { id: "clara", name: "Clara Singh" },
-  ]},
-  { id: "globex", name: "Globex Inc", initials: "GX", contacts: [
-    { id: "david", name: "David Park" },
-    { id: "ella", name: "Ella James" },
-  ]},
-  { id: "umbrella", name: "Umbrella Ltd", initials: "UL", contacts: [
-    { id: "frank", name: "Frank Moore" },
-    { id: "grace", name: "Grace Kim" },
-    { id: "hiro", name: "Hiro Tanaka" },
-  ]},
-  { id: "initech", name: "Initech", initials: "IT", contacts: [
-    { id: "jack", name: "Jack White" },
-    { id: "karen", name: "Karen Chen" },
-  ]},
-];
  
 function getInitials(name) {
   return name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
@@ -30,7 +9,25 @@ function getInitials(name) {
 export default function Sidebar() {
   const { openTab, activeTabId } = useTabs();
   const [openClients, setOpenClients] = useState({});
+  const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState(true);
  
+  useEffect(() => {
+    async function loadClients() {
+      try {
+        const res = await fetch('/api/clients');
+        const data = await res.json();
+        setClients(data.clients || []);
+      } catch (error) {
+        console.error('Failed to load clients', error);
+        setClients([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadClients();
+  }, []);
+
   function handleNav(id, label, icon) { openTab(id, label, icon); }
   function toggleClient(id) { setOpenClients((prev) => ({ ...prev, [id]: !prev[id] })); }
   function openClient(client) { openTab(`client-${client.id}`, client.name, "client"); }
@@ -61,64 +58,75 @@ export default function Sidebar() {
         <NavItem icon={<ListIcon />}  label="Tasks"     active={activeTabId === "tasks"}     onClick={() => handleNav("tasks", "Tasks", "page")} />
  
         <SectionLabel>Clients</SectionLabel>
- 
-        {clients.map((client, idx) => {
-          const style = clientPalette[idx % clientPalette.length];
-          const isOpen = !!openClients[client.id];
-          const clientTabId = `client-${client.id}`;
- 
-          return (
-            <div key={client.id}>
-              <button
-                onClick={() => { toggleClient(client.id); openClient(client); }}
-                className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors
-                  ${activeTabId === clientTabId
-                    ? "bg-bg-subtle text-text-primary"
-                    : "text-text-secondary hover:bg-bg-subtle hover:text-text-primary"}`}
-              >
-                <span
-                  className="w-7 h-7 rounded-md flex items-center justify-center text-[11px] font-medium flex-shrink-0"
-                  style={{ background: style.bg, color: style.text }}
+
+        {loading ? (
+          <p className="px-2 text-xs text-text-secondary">Loading clients…</p>
+        ) : clients.length === 0 ? (
+          <p className="px-2 text-xs text-text-secondary">No clients found.</p>
+        ) : (
+          clients.map((client, idx) => {
+            const style = clientPalette[idx % clientPalette.length];
+            const isOpen = !!openClients[client.id];
+            const clientTabId = `client-${client.id}`;
+            const initials = client.initials || getInitials(client.name);
+
+            return (
+              <div key={client.id}>
+                <button
+                  onClick={() => { toggleClient(client.id); openClient(client); }}
+                  className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors
+                    ${activeTabId === clientTabId
+                      ? "bg-bg-subtle text-text-primary"
+                      : "text-text-secondary hover:bg-bg-subtle hover:text-text-primary"}`}
                 >
-                  {client.initials}
-                </span>
-                <span className="flex-1 text-left truncate">{client.name}</span>
-                <svg
-                  className={`w-3.5 h-3.5 text-text-muted flex-shrink-0 transition-transform duration-150 ${isOpen ? "rotate-90" : ""}`}
-                  viewBox="0 0 14 14" fill="none"
-                >
-                  <path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
- 
-              {isOpen && (
-                <div className="mt-0.5 mb-1">
-                  {client.contacts.map((contact) => {
-                    const tabId = `contact-${contact.id}`;
-                    return (
-                      <button
-                        key={contact.id}
-                        onClick={() => openContact(contact)}
-                        className={`w-full flex items-center gap-2 pl-11 pr-2 py-1.5 rounded-lg text-sm transition-colors
-                          ${activeTabId === tabId
-                            ? "bg-bg-subtle text-text-primary"
-                            : "text-text-secondary hover:bg-bg-subtle hover:text-text-primary"}`}
-                      >
-                        <span
-                          className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-medium flex-shrink-0"
-                          style={{ background: style.bg, color: style.text }}
-                        >
-                          {getInitials(contact.name)}
-                        </span>
-                        <span className="truncate">{contact.name}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })}
+                  <span
+                    className="w-7 h-7 rounded-md flex items-center justify-center text-[11px] font-medium flex-shrink-0"
+                    style={{ background: style.bg, color: style.text }}
+                  >
+                    {initials}
+                  </span>
+                  <span className="flex-1 text-left truncate">{client.name}</span>
+                  <svg
+                    className={`w-3.5 h-3.5 text-text-muted flex-shrink-0 transition-transform duration-150 ${isOpen ? "rotate-90" : ""}`}
+                    viewBox="0 0 14 14" fill="none"
+                  >
+                    <path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+
+                {isOpen && (
+                  <div className="mt-0.5 mb-1">
+                    {client.contacts.length === 0 ? (
+                      <p className="px-11 py-1.5 text-xs text-text-secondary">No contacts yet.</p>
+                    ) : (
+                      client.contacts.map((contact) => {
+                        const tabId = `contact-${contact.id}`;
+                        return (
+                          <button
+                            key={contact.id}
+                            onClick={() => openContact(contact)}
+                            className={`w-full flex items-center gap-2 pl-11 pr-2 py-1.5 rounded-lg text-sm transition-colors
+                              ${activeTabId === tabId
+                                ? "bg-bg-subtle text-text-primary"
+                                : "text-text-secondary hover:bg-bg-subtle hover:text-text-primary"}`}
+                          >
+                            <span
+                              className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-medium flex-shrink-0"
+                              style={{ background: style.bg, color: style.text }}
+                            >
+                              {getInitials(contact.name)}
+                            </span>
+                            <span className="truncate">{contact.name}</span>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
  
         <SectionLabel>General</SectionLabel>
  
