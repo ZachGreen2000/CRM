@@ -8,10 +8,10 @@ export function TabProvider({ children }) {
   ]);
   const [activeTabId, setActiveTabId] = useState("home");
 
-  const openTab = useCallback((id, label, icon = "page") => {
+  const openTab = useCallback((id, label, icon = "page", data = null) => {
     setTabs((prev) => {
       if (prev.find((t) => t.id === id)) return prev;
-      return [...prev, { id, label, icon, closeable: true }];
+      return [...prev, { id, label, icon, closeable: true, data }];
     });
     setActiveTabId(id);
   }, []);

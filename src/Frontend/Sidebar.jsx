@@ -30,8 +30,8 @@ export default function Sidebar() {
 
   function handleNav(id, label, icon) { openTab(id, label, icon); }
   function toggleClient(id) { setOpenClients((prev) => ({ ...prev, [id]: !prev[id] })); }
-  function openClient(client) { openTab(`client-${client.id}`, client.name, "client"); }
-  function openContact(contact) { openTab(`contact-${contact.id}`, contact.name, "contact"); }
+  function openClient(client) { openTab(`client-${client.id}`, client.name, "client", client); }
+  function openContact(contact) { openTab(`contact-${contact.id}`, contact.name, "contact", contact); }
  
   return (
     <aside className="w-64 h-full bg-bg-surface border-r border-border-default flex flex-col">

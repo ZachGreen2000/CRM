@@ -5,6 +5,7 @@ import { useState } from "react";
 import { TabProvider, useTabs } from "./Frontend/TabContext.jsx";
 import TabBar from "./Frontend/TabBar.jsx";
 import Sidebar from "./Frontend/Sidebar.jsx";
+import ContactProfile from "./Frontend/ContactProfile.jsx";
 import { injectCSSVariables } from "./Frontend/Theme.js";
 import Floatingchat from "./Frontend/Floatingchat.jsx";
 import { useChat } from "./hooks/useChat";
@@ -14,7 +15,10 @@ injectCSSVariables(); // injects CSS variables based on Theme.js colors, fonts, 
 
 // ── Placeholder page content — replace with your real views ──
 function PageContent() {
-  const { activeTabId } = useTabs();
+  const { activeTabId, tabs } = useTabs();
+
+  // Find the current tab to get its data
+  const currentTab = tabs.find(t => t.id === activeTabId);
 
   const titles = {
     home: "Welcome home",
@@ -25,6 +29,11 @@ function PageContent() {
     users: "Users",
     integrations: "Integrations",
   };
+
+  // Check if this is a contact tab
+  if (activeTabId && activeTabId.startsWith("contact-") && currentTab?.data) {
+    return <ContactProfile contact={currentTab.data} />;
+  }
 
   const label = titles[activeTabId]
     ?? (activeTabId && typeof activeTabId === 'string'

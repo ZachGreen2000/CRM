@@ -199,7 +199,7 @@ export default function FloatingChat({
           <div style={styles.headerLeft}>
             <div style={styles.headerAvatar}><BotIcon size={16} color="#55883B" /></div>
             <div>
-              <div style={styles.headerTitle}>AI Assistant</div>
+              <div style={styles.headerTitle}>GreenI</div>
               <div style={styles.headerSub}>Always here to help</div>
             </div>
           </div>
