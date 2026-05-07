@@ -76,9 +76,9 @@ TOOLS: dict[str, Tool] = {
     "get_page_guidance": Tool(
         name="get_page_guidance",
         description=(
-            "Provides contextual help and advice about the current page or feature "
-            "the user is looking at. Use when the user asks how to do something "
-            "in the app or what a section is for."
+            "Provides contextual help and advice about the current UI, sidebar, and open tab. "
+            "Use when the user asks how to use the platform, what the current page does, "
+            "or how to navigate the CRM interface."
         ),
         agent_module="src.Orchestrator.Agents.ui_agent",
         parameters=["current_tab_id"],
@@ -151,13 +151,14 @@ TOOLS: dict[str, Tool] = {
     "add_contact": Tool(
         name="add_contact",
         description=(
-            "Adds a new contact (person) to the CRM database and links them to an existing client. "
-            "Use when the user wants to add a person to a company already in the CRM. "
-            "Requires a name and email. Client can be identified by name or ID."
+            "Adds a new contact (person) to the CRM database and links them to a client. "
+            "Use when the user wants to add a person to a company in the CRM. "
+            "Requires name and email. Use CLIENT NAME to identify the company - "
+            "the system will auto-create the client if it doesn't exist."
         ),
         agent_module="src.Orchestrator.Agents.email_agent",
-        parameters=["name", "email"],
-        optional_params=["client_name", "client_id", "role"],
+        parameters=["name", "email", "client_name"],
+        optional_params=["role"],
         examples=[
             "add a new contact",
             "add John Smith from Acme Ltd",

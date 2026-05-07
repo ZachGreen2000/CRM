@@ -48,6 +48,37 @@ function CloseIcon() {
   );
 }
 
+function RestartIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 11a8 8 0 10-2.39 5.61" />
+      <polyline points="20 11 20 6 15 6" />
+    </svg>
+  );
+}
+
+function MicIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 1a3 3 0 013 3v7a3 3 0 01-6 0V4a3 3 0 013-3z" />
+      <path d="M19 10a7 7 0 01-14 0" />
+      <path d="M12 19v4" />
+      <path d="M8 23h8" />
+    </svg>
+  );
+}
+
+function MicOffIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 9V5a3 3 0 016 0v4" />
+      <path d="M19 11a7 7 0 01-2.34 5.46" />
+      <path d="M6.34 6.34A7 7 0 0112 3" />
+      <path d="M1 1l22 22" />
+    </svg>
+  );
+}
+
 // ── Typing indicator ─────────────────────────────────────────────────────────
 function TypingDots() {
   return (
@@ -88,6 +119,8 @@ export default function FloatingChat({
   const [input, setInput]     = useState("");
   const [loading, setLoading] = useState(false);
   const [panelSide, setPanelSide] = useState("left"); // panel opens left or right of icon
+  const [recording, setRecording] = useState(false);
+  const [recordingError, setRecordingError] = useState(null);
 
   const dragging  = useRef(false);
   const moved     = useRef(false);
@@ -95,6 +128,9 @@ export default function FloatingChat({
   const posRef    = useRef(pos);
   const messagesEndRef = useRef(null);
   const textareaRef    = useRef(null);
+  const recognitionRef = useRef(null);
+  const transcriptRef = useRef("");
+  const lastResultIndexRef = useRef(0);
 
   posRef.current = pos;
 
@@ -107,6 +143,56 @@ export default function FloatingChat({
   useEffect(() => {
     setPanelSide(pos.x > window.innerWidth / 2 ? "left" : "right");
   }, [pos.x]);
+
+  // ── Speech recognition setup ─────────────────────────────────────────────────
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      return;
+    }
+
+    const recognizer = new SpeechRecognition();
+    recognizer.continuous = true;
+    recognizer.interimResults = true;
+    recognizer.lang = "en-US";
+
+    recognizer.onresult = (event) => {
+      let interimTranscript = "";
+      let transcript = transcriptRef.current;
+
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          if (i >= lastResultIndexRef.current) {
+            transcript += result[0].transcript;
+            lastResultIndexRef.current = i + 1;
+          }
+        } else {
+          interimTranscript += result[0].transcript;
+        }
+      }
+
+      transcriptRef.current = transcript.trim();
+      const currentInput = `${transcriptRef.current} ${interimTranscript}`.trim();
+      setInput(currentInput);
+    };
+
+    recognizer.onerror = (event) => {
+      setRecordingError(event.error || "Speech recognition failed");
+      setRecording(false);
+    };
+
+    recognizer.onend = () => {
+      setRecording(false);
+    };
+
+    recognitionRef.current = recognizer;
+
+    return () => {
+      recognizer.stop();
+      recognitionRef.current = null;
+    };
+  }, []);
 
   // ── Drag logic ──────────────────────────────────────────────────────────────
   const onPointerDown = useCallback((e) => {
@@ -137,6 +223,40 @@ export default function FloatingChat({
   }, []);
 
   // ── Send message ────────────────────────────────────────────────────────────
+  const handleRestartChat = useCallback(() => {
+    setMessages([{ role: "ai", content: "Hi! How can I help you today?" }]);
+    setInput("");
+    setRecording(false);
+    setRecordingError(null);
+    textareaRef.current?.focus();
+  }, []);
+
+  const handleToggleRecording = useCallback(() => {
+    const recognizer = recognitionRef.current;
+    if (!recognizer) {
+      setRecordingError("Voice recognition is not supported by your browser.");
+      return;
+    }
+
+    if (recording) {
+      recognizer.stop();
+      setRecording(false);
+      return;
+    }
+
+    transcriptRef.current = "";
+    lastResultIndexRef.current = 0;
+    setRecordingError(null);
+    setRecording(true);
+    setInput("");
+    try {
+      recognizer.start();
+    } catch (error) {
+      setRecordingError(error.message || "Unable to start microphone");
+      setRecording(false);
+    }
+  }, [recording]);
+
   const handleSend = useCallback(async () => {
     const text = input.trim();
     if (!text || loading) return;
@@ -203,9 +323,26 @@ export default function FloatingChat({
               <div style={styles.headerSub}>Always here to help</div>
             </div>
           </div>
-          <button style={styles.closeBtn} onClick={() => setOpen(false)} aria-label="Close chat">
-            <CloseIcon />
-          </button>
+          <div style={styles.headerActions}>
+            <button style={styles.headerActionBtn} onClick={handleRestartChat} type="button" aria-label="Restart chat">
+              <RestartIcon />
+            </button>
+            <button
+              style={{
+                ...styles.headerActionBtn,
+                background: recording ? "#9EE4A2" : "#F3F9EE",
+                color: recording ? "#145A22" : "#4B5563",
+              }}
+              onClick={handleToggleRecording}
+              type="button"
+              aria-label={recording ? "Stop recording" : "Start recording"}
+            >
+              {recording ? <MicOffIcon /> : <MicIcon />}
+            </button>
+            <button style={styles.closeBtn} onClick={() => setOpen(false)} aria-label="Close chat">
+              <CloseIcon />
+            </button>
+          </div>
         </div>
 
         {/* Messages */}
@@ -223,7 +360,7 @@ export default function FloatingChat({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Message AI…"
+            placeholder={recording ? "Listening... speak now" : "Message AI…"}
             rows={1}
             disabled={loading}
           />
@@ -240,6 +377,9 @@ export default function FloatingChat({
             <SendIcon />
           </button>
         </div>
+        {recordingError && (
+          <div style={styles.errorText}>{recordingError}</div>
+        )}
       </div>
 
       {/* ── Draggable icon ── */}
@@ -331,6 +471,24 @@ const styles = {
     fontSize: 11,
     color:    "#9CA3AF",
   },
+  headerActions: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+  },
+  headerActionBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    border: "1px solid #E5E7EB",
+    background: "#F3F9EE",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    color: "#4B5563",
+    transition: "background 0.15s, transform 0.15s, border-color 0.15s",
+  },
   closeBtn: {
     background:   "none",
     border:       "none",
@@ -421,6 +579,11 @@ const styles = {
     maxHeight:   100,
     overflowY:   "auto",
     transition:  "border-color 0.15s",
+  },
+  errorText: {
+    padding: "0 14px 10px",
+    fontSize: 12,
+    color: "#B91C1C",
   },
   sendBtn: {
     width:          36,

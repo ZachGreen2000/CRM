@@ -28,6 +28,21 @@ export default function Sidebar() {
     loadClients();
   }, []);
 
+  useEffect(() => {
+    const refreshClients = async () => {
+      try {
+        const res = await fetch('/api/clients');
+        const data = await res.json();
+        setClients(data.clients || []);
+      } catch (error) {
+        console.error('Failed to refresh clients', error);
+      }
+    };
+
+    window.addEventListener('clientsUpdated', refreshClients);
+    return () => window.removeEventListener('clientsUpdated', refreshClients);
+  }, []);
+
   function handleNav(id, label, icon) { openTab(id, label, icon); }
   function toggleClient(id) { setOpenClients((prev) => ({ ...prev, [id]: !prev[id] })); }
   function openClient(client) { openTab(`client-${client.id}`, client.name, "client", client); }
@@ -55,7 +70,7 @@ export default function Sidebar() {
         <NavItem icon={<HomeIcon />}  label="Home"      active={activeTabId === "home"}      onClick={() => handleNav("home", "Home", "home")} />
         <NavItem icon={<GridIcon />}  label="Dashboard" active={activeTabId === "dashboard"} onClick={() => handleNav("dashboard", "Dashboard", "page")} />
         <NavItem icon={<ClockIcon />} label="Activity"  active={activeTabId === "activity"}  onClick={() => handleNav("activity", "Activity", "page")} badge={5} />
-        <NavItem icon={<ListIcon />}  label="Tasks"     active={activeTabId === "tasks"}     onClick={() => handleNav("tasks", "Tasks", "page")} />
+        <NavItem icon={<ListIcon />}  label="Tasks"     active={activeTabId === "tasks"}     onClick={() => handleNav("tasks", "Tasks", "page", null)} />
  
         <SectionLabel>Clients</SectionLabel>
 
