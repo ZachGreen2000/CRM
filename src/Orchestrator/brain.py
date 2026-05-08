@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
 import importlib
+from src.Orchestrator.Agents import task_agent
 from src.Orchestrator.Tools.registry import get_tool, get_tool_descriptions_for_prompt
 from src.Orchestrator.Agents.email_agent import get_db
 from dotenv import load_dotenv
@@ -345,3 +346,32 @@ async def chat(req: ChatRequest):
         }
         
         
+@app.post("/api/tasks/list")
+async def list_tasks():
+    return await task_agent.run({"action": "list_tasks"})
+
+@app.post("/api/tasks/move")
+async def move_task(payload: dict):
+    return await task_agent.run({
+        "action": "move_task",
+        "task_id": payload.get("task_id"),
+        "column": payload.get("column"),
+    })
+
+@app.post("/api/tasks/delete")
+async def delete_task(payload: dict):
+    return await task_agent.run({
+        "action": "delete_task",
+        "task_id": payload.get("task_id"),
+    })
+
+@app.post("/api/tasks/create")
+async def create_task(payload: dict):
+    return await task_agent.run({
+        "action": "create_task",
+        "title": payload.get("title"),
+        "description": payload.get("description"),
+        "priority": payload.get("priority"),
+        "column": payload.get("column"),
+        "due_date": payload.get("due_date"),
+    })

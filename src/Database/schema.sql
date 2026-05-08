@@ -62,3 +62,23 @@ CREATE TABLE client_summaries (
   embedding     TEXT,  -- JSON string representation of embedding vector
   updated_at    TEXT DEFAULT (datetime('now'))
 );
+
+-- Task board (columns: backlog | todo | inprogress | done)
+CREATE TABLE tasks (
+  id            TEXT PRIMARY KEY,
+  title         TEXT NOT NULL,
+  description   TEXT,
+  priority      TEXT NOT NULL DEFAULT 'MEDIUM'
+                  CHECK (priority IN ('CRITICAL', 'HIGH', 'MEDIUM', 'LOW')),
+  column_name   TEXT NOT NULL DEFAULT 'backlog'
+                  CHECK (column_name IN ('backlog', 'todo', 'inprogress', 'done')),
+  due_date      TEXT,
+  embedding     TEXT,  -- JSON string representation of embedding vector (nomic-embed-text)
+  created_at    TEXT DEFAULT (datetime('now')),
+  updated_at    TEXT DEFAULT (datetime('now'))
+);
+ 
+-- Indexes for common task query patterns
+CREATE INDEX IF NOT EXISTS idx_tasks_column   ON tasks (column_name);
+CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks (priority);
+CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks (due_date);

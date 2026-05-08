@@ -168,6 +168,144 @@ TOOLS: dict[str, Tool] = {
         ],
     ),
 
+        # ── Tasks ──────────────────────────────────────────────────────────────────
+    "create_task": Tool(
+        name="create_task",
+        description=(
+            "Creates a new task on the task board. "
+            "Use when the user wants to add, create, or log a task. "
+            "Assigns it to a column (backlog, todo, inprogress, done) with an optional "
+            "priority, due date, and description."
+        ),
+        agent_module="src.Orchestrator.Agents.task_agent",
+        parameters=["title"],
+        optional_params=["description", "priority", "column", "due_date"],
+        examples=[
+            "add a task to fix the login bug",
+            "create a new task called update homepage",
+            "log a high priority task for the client review",
+            "new task: write release notes, due May 15",
+            "add 'send invoice' to my to-do list",
+        ],
+    ),
+ 
+    "update_task": Tool(
+        name="update_task",
+        description=(
+            "Updates one or more fields on an existing task. "
+            "Can change the title, description, priority, due date, or column. "
+            "Use when the user wants to edit, rename, reprioritise, or reschedule a task. "
+            "Requires task_id — use list_tasks or search_tasks first if the id is unknown."
+        ),
+        agent_module="src.Orchestrator.Agents.task_agent",
+        parameters=["task_id"],
+        optional_params=["title", "description", "priority", "column", "due_date"],
+        examples=[
+            "change the priority of the auth bug to critical",
+            "rename the deploy task to 'deploy to production'",
+            "update the due date on task 7 to May 20",
+            "mark the performance audit as high priority",
+            "edit the release task description",
+        ],
+    ),
+ 
+    "move_task": Tool(
+        name="move_task",
+        description=(
+            "Moves a task from one board column to another. "
+            "Use when the user wants to progress, promote, or requeue a task. "
+            "Accepted column values: backlog, todo, inprogress, done."
+        ),
+        agent_module="src.Orchestrator.Agents.task_agent",
+        parameters=["task_id", "column"],
+        optional_params=[],
+        examples=[
+            "move the deploy task to in progress",
+            "mark task 6 as done",
+            "put the auth bug back in backlog",
+            "move release v2.3.0 to done",
+            "start working on the performance audit",
+            "push the migration task to to-do",
+        ],
+    ),
+ 
+    "delete_task": Tool(
+        name="delete_task",
+        description=(
+            "Permanently deletes a task from the board. "
+            "Use only when the user explicitly asks to delete, remove, or discard a task. "
+            "Requires task_id — use list_tasks or search_tasks first if the id is unknown."
+        ),
+        agent_module="src.Orchestrator.Agents.task_agent",
+        parameters=["task_id"],
+        optional_params=[],
+        examples=[
+            "delete the user interview task",
+            "remove task 3 from the board",
+            "discard the postgres migration task",
+            "get rid of the old onboarding task",
+        ],
+    ),
+ 
+    "list_tasks": Tool(
+        name="list_tasks",
+        description=(
+            "Returns a list of tasks on the board, optionally filtered by column or priority. "
+            "Use when the user wants to see what tasks exist, review the board, or before "
+            "performing an update/move/delete when the task_id is unknown."
+        ),
+        agent_module="src.Orchestrator.Agents.task_agent",
+        parameters=[],
+        optional_params=["column", "priority", "due_date"],
+        examples=[
+            "what tasks do I have",
+            "show me everything in backlog",
+            "list all critical tasks",
+            "what's in progress right now",
+            "show me today's tasks",
+            "what's on my board",
+        ],
+    ),
+ 
+    "search_tasks": Tool(
+        name="search_tasks",
+        description=(
+            "Searches tasks by title or description using semantic similarity. "
+            "Use when the user refers to a task by a vague name or concept rather than "
+            "an exact title, or when task_id is needed before an update/move/delete."
+        ),
+        agent_module="src.Orchestrator.Agents.task_agent",
+        parameters=["query"],
+        optional_params=["column", "limit"],
+        examples=[
+            "find the task about the login bug",
+            "which task is about the staging environment",
+            "look up the accessibility task",
+            "find tasks related to deployment",
+            "is there a task for the API docs",
+        ],
+    ),
+ 
+    "summarise_tasks": Tool(
+        name="summarise_tasks",
+        description=(
+            "Generates an AI summary of the current task board: overall progress, "
+            "critical blockers, overdue items, and suggested next actions. "
+            "Use when the user wants a high-level status report or daily standup briefing."
+        ),
+        agent_module="src.Orchestrator.Agents.task_agent",
+        parameters=[],
+        optional_params=["column", "project_id"],
+        examples=[
+            "give me a task summary",
+            "what's the state of the board",
+            "summarise my tasks for today",
+            "what should I focus on",
+            "give me a standup update",
+            "any blockers or critical tasks?",
+        ],
+    ),
+
     # ── General ────────────────────────────────────────────────────────────────
     "general_query": Tool(
         name="general_query",
